@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "UserPreference": {
+      "title": "User Preference",
+      "description": "User's default styles and settings",
+      "type": "object",
+      "properties": {
+        "selectedStyle": { "type": "string" },
+        "includeMascot": { "type": "boolean" },
+        "slideLanguage": { "type": "string" }
+      }
+    },
+    "Project": {
+      "title": "Project",
+      "description": "An IG carousel project",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "number" },
+        "postData": {
+          "type": "object",
+          "properties": {
+            "mainCaption": { "type": "string", "maxLength": 5000 },
+            "slides": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "number" },
+                  "imageText": { "type": "string" },
+                  "imageBody": { "type": "string" },
+                  "imagePrompt": { "type": "string" },
+                  "textPosition": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["updatedAt"]
+    },
+    "ProjectImage": {
+      "title": "Project Image",
+      "description": "Generated image for a project slide in base64",
+      "type": "object",
+      "properties": {
+        "dataUrl": { "type": "string", "maxLength": 1000000 }
+      },
+      "required": ["dataUrl"]
+    },
+    "BrandLibraryItem": {
+      "title": "Brand Library Item",
+      "description": "Publicly shared brand image references",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string" },
+        "dataUrl": { "type": "string", "maxLength": 1000000 },
+        "createdAt": { "type": "number" },
+        "uploaderId": { "type": "string" }
+      },
+      "required": ["category", "dataUrl", "createdAt", "uploaderId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/preferences/{docPath=**}": {
+      "schema": "UserPreference",
+      "description": "Preferences for a specific user. Can be default."
+    },
+    "users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Projects belonging to a specific user."
+    },
+    "users/{userId}/images/{imageId}": {
+      "schema": "ProjectImage",
+      "description": "Images belonging to a specific user's projects."
+    },
+    "brandLibrary/{itemId}": {
+      "schema": "BrandLibraryItem",
+      "description": "Public library items uploaded by users."
+    }
+  }
+}
