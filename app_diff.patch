@@ -1,0 +1,160 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 63944c9..4985faf 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -13,7 +13,7 @@ import { Label } from '../components/ui/label';
+ import { Slider } from '../components/ui/slider';
+ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog';
+ import { ScrollArea } from '../components/ui/scroll-area';
+-import { CopyIcon, SparklesIcon, TrashIcon, Image as ImageIcon, Loader2, RefreshCw, Upload, Download, ArrowRight, ShareIcon, ChevronLeft, ChevronRight, Check, LogOutIcon, Settings as SettingsIcon } from 'lucide-react';
++import { CopyIcon, SparklesIcon, TrashIcon, Image as ImageIcon, Loader2, RefreshCw, Upload, Download, ArrowRight, ShareIcon, ChevronLeft, ChevronRight, Check, LogOutIcon, Settings as SettingsIcon, MousePointer2, Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
+ import { cn, compressImage } from './lib/utils';
+ import { motion, AnimatePresence } from 'motion/react';
+ import * as htmlToImage from 'html-to-image';
+@@ -77,6 +77,7 @@ const defaultData = {
+     layoutStyle: 'gradient', // 'gradient', 'solid', 'glass', 'textOnly'
+     layoutOpacity: 100
+   },
++  includeCta: true,
+   mainCaption: "請在上方輸入主題並選擇所需頁數（1-6頁），系統會為你準備專業詳盡的 IG 圖文企劃！\n\n#TraveltopiaHK #英國生活",
+   slides: Array.from({ length: 6 }).map((_, i) => ({
+     id: i + 1,
+@@ -100,6 +101,56 @@ const defaultData = {
+   }))
+ };
+ 
++const CtaSlideContent = () => (
++    <div className="w-full h-full bg-white relative flex flex-col justify-between overflow-hidden container" style={{ containerType: 'inline-size' }}>
++        <div className="absolute inset-0 m-[2.2cqw] border-[0.3cqw] border-[#b0b0b0] pointer-events-none z-10" />
++        <div className="absolute inset-0 m-[3.7cqw] border-[0.2cqw] border-[#b0b0b0] pointer-events-none z-10" />
++
++        <div className="flex-1 flex flex-col items-center justify-center relative z-20 pt-[7.4cqw]">
++            <div className="flex items-center gap-[1.5cqw] mb-[2cqw]">
++                <h1 className="text-[6.6cqw] font-black text-black tracking-tight" style={{ fontFamily: 'Montserrat, sans-serif' }}>Follow Us</h1>
++                <MousePointer2 className="w-[6cqw] h-[6cqw] text-neutral-500 fill-neutral-500 rotate-[-45deg] mb-[4.4cqw]" />
++            </div>
++            
++            <div className="bg-[#8c8c8c] px-[4.4cqw] py-[1.5cqw] mb-[6cqw] shadow-sm">
++                <p className="text-[4.4cqw] font-bold text-white tracking-widest">traveltopia.hk</p>
++            </div>
++
++            <div className="flex flex-col items-center gap-[2.2cqw] mb-[8cqw]">
++                <h2 className="text-[5.5cqw] font-black text-black">發掘更多</h2>
++                <h2 className="text-[5.5cqw] font-black text-black">英國生活及旅遊資訊</h2>
++            </div>
++
++            <div className="flex items-center gap-[4.4cqw]">
++                <div className="flex flex-col items-center gap-[1cqw]">
++                    <Heart className="w-[7.4cqw] h-[7.4cqw] text-neutral-600 fill-neutral-600" />
++                    <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">LIKE</span>
++                </div>
++                <div className="flex flex-col items-center gap-[1cqw]">
++                    <MessageCircle className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
++                    <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">COMMENT</span>
++                </div>
++                <div className="flex flex-col items-center gap-[1cqw]">
++                    <Send className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
++                    <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">SHARE</span>
++                </div>
++                <div className="flex flex-col items-center gap-[1cqw]">
++                    <Bookmark className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
++                    <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">SAVE</span>
++                </div>
++            </div>
++        </div>
++
++        <div className="h-[25%] bg-[#206A5D] w-full relative z-20 flex items-end justify-center pb-[4.4cqw]">
++            <p className="text-[3.3cqw] font-bold text-white tracking-[0.5em]">旅遊邦</p>
++            
++            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[45%]">
++                <MascotLogo className="w-[17.7cqw] h-[17.7cqw] drop-shadow-xl" />
++            </div>
++        </div>
++    </div>
++);
++
+ export default function App() {
+   const [user, setUser] = useState<User | null>(null);
+   const [authLoading, setAuthLoading] = useState(true);
+@@ -1392,6 +1443,26 @@ export default function App() {
+                         </Select>
+                     </div>
+                 </div>
++
++                <div className="mt-6 pt-6 border-t border-[#E5E7EB] flex items-center gap-3">
++                    <input 
++                        type="checkbox" 
++                        id="includeCta"
++                        className="w-5 h-5 rounded border-gray-300 text-[#F26522] focus:ring-[#F26522] cursor-pointer"
++                        checked={postData.includeCta !== false}
++                        onChange={e => {
++                            const newData = { ...postData, includeCta: e.target.checked };
++                            if (!e.target.checked && currentSlide === postData.slides.length) {
++                                setCurrentSlide(0);
++                            }
++                            setPostData(newData);
++                            saveProjectData(newData, true);
++                        }}
++                    />
++                    <label htmlFor="includeCta" className="text-sm font-bold text-neutral-700 cursor-pointer">
++                        加入結尾行動呼籲頁面 (Include CTA Page)
++                    </label>
++                </div>
+             </div>
+ 
+             {/* Box 6: Content Editor & Pagination */}
+@@ -1423,7 +1494,7 @@ export default function App() {
+                     </div>
+                 </div>
+ 
+-                {postData.slides[currentSlide] && (
++                {(postData.slides[currentSlide] || currentSlide === postData.slides.length) && (
+                     <div className="flex flex-col lg:flex-row gap-6">
+                         
+                         {/* Live Mockup Preview */}
+@@ -1439,7 +1510,9 @@ export default function App() {
+                                         <div 
+                                             className="bg-white overflow-hidden relative w-full h-full"
+                                         >
+-                                            {images[postData.slides[currentSlide].id] ? (
++                                            {currentSlide === postData.slides.length ? (
++                                                <CtaSlideContent />
++                                            ) : images[postData.slides[currentSlide].id] ? (
+                                             <img 
+                                                 src={images[postData.slides[currentSlide].id]} 
+                                                 className="absolute inset-0 w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500" 
+@@ -1576,6 +1649,15 @@ export default function App() {
+                         </div>
+ 
+                         {/* Slide Content Editor */}
++                        {currentSlide === postData.slides.length ? (
++                            <div className="flex-1 flex flex-col items-center justify-center bg-[#F7F6F3] border border-dashed border-[#E5E7EB] rounded-3xl p-6 text-center">
++                                <h3 className="text-xl font-bold text-gray-700 mb-4">📢 結尾行動呼籲頁面 (CTA)</h3>
++                                <p className="text-gray-500 text-sm max-w-sm mb-4">
++                                    此頁面為固定設計，將會自動附加於您的貼文最後一頁。<br/>
++                                    您可以透過左側全域設定中的核取方塊來取消隱藏。
++                                </p>
++                            </div>
++                        ) : (
+                         <div className="flex-1 bg-[#F7F6F3] border border-dashed border-[#E5E7EB] rounded-3xl p-6 flex flex-col gap-5">
+                             <div className="flex items-center gap-2">
+                                 <div className="w-3 h-6 bg-[#f26522] rounded-full"></div>
+@@ -2043,7 +2125,7 @@ export default function App() {
+                                     )}
+                                 </div>
+                             </div>
+-                        </div>
++                        )}
+                     </div>
+                 )}
+             </section>
+diff --git a/src/index.css b/src/index.css
+index 8a35921..e17d69d 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -1,4 +1,4 @@
+-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;500;700;900&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Pacifico&family=Dancing+Script:wght@400;700&family=Anton&family=Space+Grotesk:wght@400;700&family=Outfit:wght@400;700&display=swap');
++@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;500;700;900&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Pacifico&family=Dancing+Script:wght@400;700&family=Anton&family=Space+Grotesk:wght@400;700&family=Outfit:wght@400;700&family=Zen+Maru+Gothic:wght@400;500;700&family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Montserrat:wght@400;700;900&family=Poppins:wght@400;700;900&family=Bebas+Neue&display=swap');
+ @import "tailwindcss";
+ @import "tw-animate-css";
+ @import "shadcn/tailwind.css";

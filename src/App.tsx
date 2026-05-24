@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, onSnapshot, deleteDoc, addDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
-import { generateCarouselStory, regenerateSlidesFromCaption, generateRewrite, generateTrivia, generateCarouselImage, generateSlideTextRewrite, generateSlidePrompt, editImageInpaint, generateDesignSuggestion } from './lib/gemini';
+import { generateCarouselStory, parseImportedScript, regenerateSlidesFromCaption, generateRewrite, generateTrivia, generateCarouselImage, generateSlideTextRewrite, generateSlidePrompt, editImageInpaint, generateDesignSuggestion } from './lib/gemini';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -13,7 +13,7 @@ import { Label } from '../components/ui/label';
 import { Slider } from '../components/ui/slider';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { CopyIcon, SparklesIcon, TrashIcon, Image as ImageIcon, Loader2, RefreshCw, Upload, Download, ArrowRight, ShareIcon, ChevronLeft, ChevronRight, Check, LogOutIcon, Settings as SettingsIcon } from 'lucide-react';
+import { CopyIcon, SparklesIcon, TrashIcon, Image as ImageIcon, Loader2, RefreshCw, Upload, Download, ArrowRight, ShareIcon, ChevronLeft, ChevronRight, Check, LogOutIcon, Settings as SettingsIcon, MousePointer2, Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
 import { cn, compressImage } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import * as htmlToImage from 'html-to-image';
@@ -100,6 +100,65 @@ const defaultData = {
   }))
 };
 
+const CtaSlideContent = ({ selectedCtaUrl }: { selectedCtaUrl?: string }) => {
+    if (selectedCtaUrl) {
+        return (
+            <div className="w-full h-full bg-white relative overflow-hidden flex items-center justify-center">
+                <img src={selectedCtaUrl} className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+        );
+    }
+    return (
+        <div className="w-full h-full bg-white relative flex flex-col justify-between overflow-hidden" style={{ containerType: 'inline-size' }}>
+            <div className="absolute inset-0 m-[2.2cqw] border-[0.3cqw] border-[#b0b0b0] pointer-events-none z-10" />
+            <div className="absolute inset-0 m-[3.7cqw] border-[0.2cqw] border-[#b0b0b0] pointer-events-none z-10" />
+
+            <div className="flex-1 flex flex-col items-center justify-center relative z-20 pt-[7.4cqw]">
+                <div className="flex items-center gap-[1.5cqw] mb-[2cqw]">
+                    <h1 className="text-[6.6cqw] font-black text-black tracking-tight" style={{ fontFamily: 'Montserrat, sans-serif' }}>Follow Us</h1>
+                    <MousePointer2 className="w-[6cqw] h-[6cqw] text-neutral-500 fill-neutral-500 rotate-[-45deg] mb-[4.4cqw]" />
+                </div>
+                
+                <div className="bg-[#8c8c8c] px-[4.4cqw] py-[1.5cqw] mb-[6cqw] shadow-sm">
+                    <p className="text-[4.4cqw] font-bold text-white tracking-widest">traveltopia.hk</p>
+                </div>
+
+                <div className="flex flex-col items-center gap-[2.2cqw] mb-[8cqw]">
+                    <h2 className="text-[5.5cqw] font-black text-black">發掘更多</h2>
+                    <h2 className="text-[5.5cqw] font-black text-black">英國生活及旅遊資訊</h2>
+                </div>
+
+                <div className="flex items-center gap-[4.4cqw]">
+                    <div className="flex flex-col items-center gap-[1cqw]">
+                        <Heart className="w-[7.4cqw] h-[7.4cqw] text-neutral-600 fill-neutral-600" />
+                        <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">LIKE</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-[1cqw]">
+                        <MessageCircle className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
+                        <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">COMMENT</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-[1cqw]">
+                        <Send className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
+                        <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">SHARE</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-[1cqw]">
+                        <Bookmark className="w-[7.4cqw] h-[7.4cqw] text-neutral-600" strokeWidth={1.5} />
+                        <span className="text-[2cqw] font-bold text-black tracking-wider uppercase">SAVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="h-[25%] bg-[#206A5D] w-full relative z-20 flex items-end justify-center pb-[4.4cqw]">
+                <p className="text-[3.3cqw] font-bold text-white tracking-[0.5em]">旅遊邦</p>
+                
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[45%]">
+                    <MascotLogo className="w-[17.7cqw] h-[17.7cqw] drop-shadow-xl" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -108,6 +167,19 @@ export default function App() {
   const [projectList, setProjectList] = useState<any[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const currentProjectIdRef = useRef<string | null>(null);
+  
+  const [postData, setPostData] = useState(defaultData);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [images, setImages] = useState<Record<string, string>>({});
+  const [loadingSlide, setLoadingSlide] = useState<Record<string, boolean>>({});
+  const [slideInstructions, setSlideInstructions] = useState<Record<string, string>>({});
+  const [enlargedImage, setEnlargedImage] = useState<{url: string, slideIdx?: number} | null>(null);
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [editPrompt, setEditPrompt] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [editImageLoading, setEditImageLoading] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -122,6 +194,74 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  // Dynamic Google Fonts Loader
+  useEffect(() => {
+    if (!postData || !postData.slides) return;
+    
+    // Collect all unique font names used in global settings and custom slide overrides
+    const fonts = new Set<string>();
+    const ds = postData.designSettings || defaultData.designSettings;
+    if (ds.fontFamily) fonts.add(ds.fontFamily);
+    if (ds.titleFontFamily) fonts.add(ds.titleFontFamily);
+    if (ds.bodyFontFamily) fonts.add(ds.bodyFontFamily);
+    
+    postData.slides.forEach(slide => {
+      const sds = (slide as any).designSettings;
+      if (sds) {
+        if (sds.fontFamily) fonts.add(sds.fontFamily);
+        if (sds.titleFontFamily) fonts.add(sds.titleFontFamily);
+        if (sds.bodyFontFamily) fonts.add(sds.bodyFontFamily);
+      }
+    });
+    
+    // Fallbacks to load by default
+    fonts.add('Inter');
+    
+    const cleanFontName = (font: string) => {
+      return font.replace(/['"]/g, '').split(',')[0].trim();
+    };
+
+    const fontParamMap: Record<string, string> = {
+      'Inter': 'Inter:wght@400;500;600;700;800;900',
+      'Noto Sans TC': 'Noto+Sans+TC:wght@400;500;700;900',
+      'Noto Serif TC': 'Noto+Serif+TC:wght@400;500;700;900',
+      'Oswald': 'Oswald:wght@400;700',
+      'Playfair Display': 'Playfair+Display:wght@400;700',
+      'Pacifico': 'Pacifico',
+      'Dancing Script': 'Dancing+Script:wght@400;700',
+      'Anton': 'Anton',
+      'Space Grotesk': 'Space+Grotesk:wght@400;700',
+      'Outfit': 'Outfit:wght@400;700',
+      'Zen Maru Gothic': 'Zen+Maru+Gothic:wght@400;500;700',
+      'ZCOOL KuaiLe': 'ZCOOL+KuaiLe',
+      'Ma Shan Zheng': 'Ma+Shan+Zheng',
+      'Zhi Mang Xing': 'Zhi+Mang+Xing',
+      'Montserrat': 'Montserrat:wght@400;700;900',
+      'Poppins': 'Poppins:wght@400;700;900',
+      'Bebas Neue': 'Bebas+Neue'
+    };
+
+    const cleanFonts = Array.from(fonts).map(cleanFontName);
+    const params = cleanFonts
+      .map(f => fontParamMap[f] || `${f.replace(/\s+/g, '+')}`)
+      .map(p => `family=${p}`)
+      .join('&');
+    
+    const url = `https://fonts.googleapis.com/css2?${params}&display=swap`;
+    
+    let link = document.getElementById('dynamic-google-fonts') as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'dynamic-google-fonts';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    
+    if (link.href !== url) {
+      link.href = url;
+    }
+  }, [postData]);
+  
   useEffect(() => { currentProjectIdRef.current = currentProjectId; }, [currentProjectId]);
   useEffect(() => { 
       if (!showExportPreview) {
@@ -130,17 +270,7 @@ export default function App() {
       }
   }, [showExportPreview]);
 
-  const [postData, setPostData] = useState(defaultData);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [images, setImages] = useState<Record<string, string>>({});
-  const [loadingSlide, setLoadingSlide] = useState<Record<string, boolean>>({});
-  const [slideInstructions, setSlideInstructions] = useState<Record<string, string>>({});
-  const [enlargedImage, setEnlargedImage] = useState<{url: string, slideIdx?: number} | null>(null);
-  const [isEditingImage, setIsEditingImage] = useState(false);
-  const [editPrompt, setEditPrompt] = useState("");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [editImageLoading, setEditImageLoading] = useState(false);
+
   
   const WrapperLayout = useCallback(({ children }: { children: React.ReactNode }) => {
     return isDesktop ? (
@@ -228,6 +358,8 @@ export default function App() {
   };
   
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [importedScript, setImportedScript] = useState('');
+  const [isParsingScript, setIsParsingScript] = useState(false);
   const [isGeneratingRewrite, setIsGeneratingRewrite] = useState(false);
   const [isGeneratingTrivia, setIsGeneratingTrivia] = useState(false);
   const [isGeneratingSlideText, setIsGeneratingSlideText] = useState(false);
@@ -244,6 +376,8 @@ export default function App() {
   const [selectedLayoutId, setSelectedLayoutId] = useState<string | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
+
+  const selectedCtaUrl = brandLibrary.find(item => item.id === (postData as any).selectedCtaId && item.category === 'CTA')?.dataUrl;
 
   const [copyStatus, setCopyStatus] = useState('');
 
@@ -439,18 +573,23 @@ export default function App() {
     catch(e) {}
   };
 
-  const handleUploadToLibrary = async (e: React.ChangeEvent<HTMLInputElement>, category: 'TT' | 'Layout') => {
+  const handleUploadToLibrary = async (e: React.ChangeEvent<HTMLInputElement>, category: 'TT' | 'Layout' | 'CTA') => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     const reader = new FileReader();
     reader.onloadend = async () => {
        try {
-           await addDoc(collection(db, 'brandLibrary'), {
+           const docRef = await addDoc(collection(db, 'brandLibrary'), {
                category,
                dataUrl: reader.result,
                createdAt: Date.now(),
                uploaderId: user.uid
            });
+           if (category === 'CTA') {
+               const newData = { ...postData, selectedCtaId: docRef.id };
+               setPostData(newData);
+               saveProjectData(newData, true);
+           }
        } catch (error) {
            handleFirestoreError(error, OperationType.CREATE, 'brandLibrary');
        }
@@ -465,6 +604,11 @@ export default function App() {
        await deleteDoc(doc(db, 'brandLibrary', id));
        if (selectedMascotId === id) setSelectedMascotId(null);
        if (selectedLayoutId === id) setSelectedLayoutId(null);
+       if ((postData as any).selectedCtaId === id) {
+           const newData = { ...postData, selectedCtaId: undefined };
+           setPostData(newData);
+           saveProjectData(newData, true);
+       }
     } catch (error) {
        handleFirestoreError(error, OperationType.DELETE, 'brandLibrary');
     }
@@ -540,6 +684,30 @@ export default function App() {
         showCopyStatus('✅ 已成功生成內容！');
     } catch (e) { console.error(e); showCopyStatus('⚠️ 生成失敗請重試'); }
     setIsGeneratingStory(false);
+  };
+
+  const handleImportScript = async () => {
+    if (!importedScript.trim()) return;
+    setIsParsingScript(true);
+    try {
+        const payload = await parseImportedScript(importedScript, language);
+        payload.designSettings = { ...(postData.designSettings || defaultData.designSettings) };
+        payload.slides = payload.slides.map((s: any) => ({
+            ...s,
+            textPosition: 'bottom',
+            designSettings: { ...payload.designSettings }
+        }));
+        setPostData(payload);
+        setCurrentSlide(0);
+        setImages({});
+        setSlideInstructions({});
+        await saveProjectData(payload);
+        showCopyStatus('✅ 已成功解析並匯入腳本內容！');
+    } catch (e) {
+        console.error(e);
+        showCopyStatus('⚠️ 解析失敗請重試');
+    }
+    setIsParsingScript(false);
   };
 
   const handlePlanSlidesFromCaption = async () => {
@@ -624,7 +792,12 @@ export default function App() {
     try {
         showCopyStatus('📸 準備匯出中...');
         
-        // 1. Give Safari time to paint the background images
+        // 1. Wait for dynamic fonts to be fully loaded and give Safari time to paint
+        try {
+            await document.fonts.ready;
+        } catch (e) {
+            console.warn('Font loading check failed:', e);
+        }
         await new Promise(r => setTimeout(r, 150));
         // 2. Copy caption to clipboard
         try {
@@ -651,7 +824,7 @@ export default function App() {
                             canvasWidth: 1080, 
                             canvasHeight: 1350,
                             pixelRatio: 1, // Reduced from 2 to 1 for smaller file size
-                            skipFonts: true,
+                            skipFonts: false,
                             cacheBust: true
                         });
                         
@@ -666,6 +839,27 @@ export default function App() {
             }
         }
 
+        if (postData.includeCta !== false) {
+            const el = document.getElementById('export-slide-cta');
+            if (el) {
+                try {
+                    await htmlToImage.toJpeg(el, { quality: 0.1, canvasWidth: 1080, canvasHeight: 1350, skipFonts: true });
+                    const dataUrl = await htmlToImage.toJpeg(el, { 
+                        quality: 0.8, 
+                        canvasWidth: 1080, 
+                        canvasHeight: 1350,
+                        pixelRatio: 1, 
+                        skipFonts: false,
+                        cacheBust: true
+                    });
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    const file = new File([blob], `traveltopia_slide_${postData.slides.length + 1}.jpg`, { type: 'image/jpeg' });
+                    files.push(file);
+                } catch(e) { console.error('Export CTA error', e) }
+            }
+        }
+
         return files;
     } finally {
         setIsExporting(false);
@@ -673,7 +867,7 @@ export default function App() {
   };
 
   // Text Styling Helpers
-  const getTextStyle = (isTitle: boolean, isOffscreen: boolean = false, slideIndex?: number) => {
+  const getTextStyle = (isTitle: boolean, slideIndex?: number) => {
     let ds = postData.designSettings || defaultData.designSettings;
     
     if (slideIndex !== undefined && (postData.slides[slideIndex] as any).designSettings) {
@@ -681,13 +875,7 @@ export default function App() {
     }
 
     const baseSize = isTitle ? ds.titleSize : ds.bodySize;
-    let computedSize;
-
-    if (isOffscreen) {
-        computedSize = baseSize;
-    } else {
-        computedSize = `${(baseSize / 1080) * 100}cqw`;
-    }
+    const computedSize = `${(baseSize / 1080) * 100}cqw`;
 
     const color = isTitle ? ds.titleColor : ds.bodyColor;
     let textShadow = 'none';
@@ -695,11 +883,11 @@ export default function App() {
     let WebkitTextStroke = undefined;
     
     if (effect === 'shadow') {
-       textShadow = '0px 2px 10px rgba(0,0,0,0.5)';
+       textShadow = '0cqw 0.185cqw 0.926cqw rgba(0,0,0,0.5)';
     } else if (effect === 'neon') {
-       textShadow = `0 0 5px ${color}, 0 0 10px ${color}, 0 0 20px ${color}`;
+       textShadow = `0cqw 0cqw 0.463cqw ${color}, 0cqw 0cqw 0.926cqw ${color}, 0cqw 0cqw 1.852cqw ${color}`;
     } else if (effect === 'outline') {
-       WebkitTextStroke = '1.5px black';
+       WebkitTextStroke = '0.1389cqw black';
     }
 
     return {
@@ -711,7 +899,7 @@ export default function App() {
     };
   };
 
-  const getLayoutPaddingStyle = (position: 'top' | 'bottom', isExport: boolean = false, slideIndex?: number) => {
+  const getLayoutPaddingStyle = (position: 'top' | 'bottom', slideIndex?: number) => {
       let ds = postData.designSettings || defaultData.designSettings;
       if (slideIndex !== undefined && (postData.slides[slideIndex] as any).designSettings) {
           ds = { ...ds, ...(postData.slides[slideIndex] as any).designSettings };
@@ -720,8 +908,8 @@ export default function App() {
       const isTop = position === 'top';
       const isGradient = !ds.layoutStyle || ds.layoutStyle === 'gradient';
       
-      const basePad = isExport ? 80 : '7.407cqw';
-      const extendedPad = isExport ? 240 : '22.22cqw';
+      const basePad = '7.407cqw';
+      const extendedPad = '22.22cqw';
       
       if (isGradient) {
           return {
@@ -903,36 +1091,13 @@ export default function App() {
             
             {/* Box 1: Configuration */}
             <section className="bg-white border border-[#E5E7EB] shadow-sm rounded-3xl p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-6 bg-[#2EB1AD] rounded-full"></div>
-                  <h2 className="font-black text-[#2D3142] text-lg">企劃設定</h2>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-6 bg-[#2EB1AD] rounded-full"></div>
+                    <h2 className="font-black text-[#2D3142] text-lg">企劃設定</h2>
+                  </div>
                 </div>
                 <div className="space-y-5">
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold mb-2 block">話題關鍵字</label>
-                        <Input placeholder="例如：倫敦深度一日遊..." value={keyword} onChange={e => setKeyword(e.target.value)} className="w-full bg-[#F7F6F3] border focus:border-[#2eb1ad] rounded-xl px-4 py-3 text-sm font-bold focus-visible:ring-[#2eb1ad]" />
-                    </div>
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold block">貼文頁數</label>
-                            <span className="text-[#f26522] font-black text-sm bg-[#FFF3E0] px-3 py-1 rounded-lg">{slideCount[0]} 頁</span>
-                        </div>
-                        <div className="grid grid-cols-6 gap-2">
-                            {[1,2,3,4,5,6].map(num => (
-                               <button 
-                                  key={num}
-                                  onClick={() => setSlideCount([num])}
-                                  className={cn("py-2.5 rounded-xl text-sm font-black transition-all border", 
-                                    slideCount[0] === num 
-                                      ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
-                                      : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
-                                  )}
-                               >
-                                 {num}
-                               </button>
-                            ))}
-                        </div>
-                    </div>
                     <div>
                         <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold mb-2 block">語言設定 (Language)</label>
                         <Select value={language} onValueChange={(val: any) => setLanguage(val)}>
@@ -945,37 +1110,94 @@ export default function App() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold block">內容長度 (Threads 友好 vs 深度企劃)</label>
-                        </div>
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => setIsLongContent(false)}
-                                className={cn("flex-1 py-2.5 rounded-xl text-xs font-black transition-all border", 
-                                  !isLongContent 
-                                    ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
-                                    : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
-                                )}
-                            >
-                                🧵 簡潔 (500字內)
+
+                    <Tabs defaultValue="keyword" className="w-full space-y-4">
+                        <TabsList className="grid grid-cols-2 bg-[#F7F6F3] p-1 rounded-xl w-full h-11 border border-[#EAE8E4]">
+                            <TabsTrigger value="keyword" className="font-bold py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-active:bg-white data-active:shadow-sm">
+                                話題生成
+                            </TabsTrigger>
+                            <TabsTrigger value="import" className="font-bold py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-active:bg-white data-active:shadow-sm">
+                                匯入腳本
+                            </TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="keyword" className="space-y-4 outline-none">
+                            <div>
+                                <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold mb-2 block">話題關鍵字</label>
+                                <Input placeholder="例如：倫敦深度一日遊..." value={keyword} onChange={e => setKeyword(e.target.value)} className="w-full bg-[#F7F6F3] border focus:border-[#2eb1ad] rounded-xl px-4 py-3 text-sm font-bold focus-visible:ring-[#2eb1ad]" />
+                            </div>
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold block">貼文頁數</label>
+                                    <span className="text-[#f26522] font-black text-sm bg-[#FFF3E0] px-3 py-1 rounded-lg">{slideCount[0]} 頁</span>
+                                </div>
+                                <div className="grid grid-cols-6 gap-2">
+                                    {[1,2,3,4,5,6].map(num => (
+                                       <button 
+                                          key={num}
+                                          onClick={() => setSlideCount([num])}
+                                          className={cn("py-2.5 rounded-xl text-sm font-black transition-all border", 
+                                            slideCount[0] === num 
+                                              ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
+                                              : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
+                                          )}
+                                       >
+                                         {num}
+                                       </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold block">內容長度 (Threads 友好 vs 深度企劃)</label>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setIsLongContent(false)}
+                                        className={cn("flex-1 py-2.5 rounded-xl text-xs font-black transition-all border", 
+                                          !isLongContent 
+                                            ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
+                                            : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
+                                        )}
+                                    >
+                                        🧵 簡潔 (500字內)
+                                    </button>
+                                    <button 
+                                        onClick={() => setIsLongContent(true)}
+                                        className={cn("flex-1 py-2.5 rounded-xl text-xs font-black transition-all border", 
+                                          isLongContent 
+                                            ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
+                                            : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
+                                        )}
+                                    >
+                                        📖 專業深度
+                                    </button>
+                                </div>
+                            </div>
+                            <button onClick={handleGenerateStory} disabled={isGeneratingStory || !keyword} className="w-full py-3.5 bg-zinc-900 text-white rounded-xl text-sm font-bold mt-2 hover:bg-zinc-800 hover:-translate-y-0.5 shadow-sm active:translate-y-0.5 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all flex justify-center items-center">
+                                {isGeneratingStory ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <SparklesIcon className="w-5 h-5 mr-2" />}
+                                生成內容草稿
                             </button>
-                            <button 
-                                onClick={() => setIsLongContent(true)}
-                                className={cn("flex-1 py-2.5 rounded-xl text-xs font-black transition-all border", 
-                                  isLongContent 
-                                    ? "bg-[#2EB1AD] text-white border-transparent shadow-sm scale-105" 
-                                    : "bg-[#F7F6F3] border-[#EAE8E4] text-neutral-500 hover:border-[#2EB1AD] hover:text-[#2EB1AD]"
-                                )}
-                            >
-                                📖 專業深度
+                        </TabsContent>
+                        
+                        <TabsContent value="import" className="space-y-4 outline-none">
+                            <div>
+                                <label className="text-xs uppercase tracking-wider text-neutral-500 font-bold mb-2 block">貼上你的腳本或草稿</label>
+                                <Textarea 
+                                    placeholder="貼上你的文章、分頁大綱、筆記或完整草稿..." 
+                                    value={importedScript} 
+                                    onChange={e => setImportedScript(e.target.value)} 
+                                    className="w-full min-h-[140px] bg-[#F7F6F3] border focus:border-[#2eb1ad] rounded-xl px-4 py-3 text-sm font-medium focus-visible:ring-[#2eb1ad] resize-y" 
+                                />
+                                <span className="text-[10px] text-neutral-400 mt-1 block">AI 將自動判斷分頁數量、翻譯並生成符合設計規範的英文 Image Prompt。</span>
+                            </div>
+                            
+                            <button onClick={handleImportScript} disabled={isParsingScript || !importedScript.trim()} className="w-full py-3.5 bg-zinc-900 text-white rounded-xl text-sm font-bold mt-2 hover:bg-zinc-800 hover:-translate-y-0.5 shadow-sm active:translate-y-0.5 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all flex justify-center items-center">
+                                {isParsingScript ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <SparklesIcon className="w-5 h-5 mr-2" />}
+                                智能解析並匯入
                             </button>
-                        </div>
-                    </div>
-                    <button onClick={handleGenerateStory} disabled={isGeneratingStory || !keyword} className="w-full py-3.5 bg-zinc-900 text-white rounded-xl text-sm font-bold mt-2 hover:bg-zinc-800 hover:-translate-y-0.5 shadow-sm active:translate-y-0.5 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all flex justify-center items-center">
-                        {isGeneratingStory ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <SparklesIcon className="w-5 h-5 mr-2" />}
-                        生成內容草稿
-                    </button>
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </section>
 
@@ -1132,19 +1354,36 @@ export default function App() {
                         
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
                             {brandLibrary.map(item => {
-                                const isSelected = item.category === 'TT' ? selectedMascotId === item.id : selectedLayoutId === item.id;
+                                const isSelected = item.category === 'TT' 
+                                    ? selectedMascotId === item.id 
+                                    : item.category === 'CTA'
+                                        ? (postData as any).selectedCtaId === item.id
+                                        : selectedLayoutId === item.id;
                                 return (
                                 <div key={item.id} className="relative group shrink-0">
                                     <img 
                                         src={item.dataUrl} 
-                                        className={cn("w-14 h-14 rounded-xl object-cover cursor-pointer border-[3px] transition", isSelected ? (item.category === 'TT' ? "border-[#f26522]" : "border-[#2EB1AD]") : "border-transparent opacity-60 hover:opacity-100")} 
+                                        className={cn("w-14 h-14 rounded-xl object-cover cursor-pointer border-[3px] transition", 
+                                            isSelected 
+                                                ? (item.category === 'TT' ? "border-[#f26522]" : item.category === 'CTA' ? "border-purple-500" : "border-[#2EB1AD]") 
+                                                : "border-transparent opacity-60 hover:opacity-100"
+                                        )} 
                                         onClick={() => {
-                                            if (item.category === 'TT') setSelectedMascotId(isSelected ? null : item.id);
-                                            else setSelectedLayoutId(isSelected ? null : item.id);
+                                            if (item.category === 'TT') {
+                                                setSelectedMascotId(isSelected ? null : item.id);
+                                            } else if (item.category === 'CTA') {
+                                                const newData = { ...postData, selectedCtaId: isSelected ? undefined : item.id };
+                                                setPostData(newData);
+                                                saveProjectData(newData, true);
+                                            } else {
+                                                setSelectedLayoutId(isSelected ? null : item.id);
+                                            }
                                         }}
                                     />
-                                    <span className={cn("absolute -bottom-1 -right-1 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-full border border-white", item.category === 'TT' ? 'bg-[#f26522]' : 'bg-[#2EB1AD]')}>
-                                        {item.category === 'TT' ? '角色' : '版面'}
+                                    <span className={cn("absolute -bottom-1 -right-1 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-full border border-white", 
+                                        item.category === 'TT' ? 'bg-[#f26522]' : item.category === 'CTA' ? 'bg-purple-500' : 'bg-[#2EB1AD]'
+                                    )}>
+                                        {item.category === 'TT' ? '角色' : item.category === 'CTA' ? '結尾圖' : '版面'}
                                     </span>
                                 </div>
                             )})}
@@ -1163,8 +1402,33 @@ export default function App() {
                             {selectedLayoutId && (
                                 <p className="text-[10px] text-[#2EB1AD] font-black">✅ 已選擇版面/風格參考圖 (100% 相似)</p>
                             )}
+                            {(postData as any).selectedCtaId && postData.includeCta !== false && (
+                                <p className="text-[10px] text-purple-600 font-black">✅ 已選擇自訂結尾呼籲圖 (CTA)</p>
+                            )}
+                            {(postData as any).selectedCtaId && postData.includeCta === false && (
+                                <p className="text-[10px] text-red-500 font-black">⚠️ 結尾頁已停用，自訂結尾圖將被忽略</p>
+                            )}
                         </div>
-                    </div>
+
+                        <div className="mt-2 pt-3 border-t border-[#E5E7EB] flex items-center gap-3">
+                            <input 
+                                type="checkbox" 
+                                id="includeCtaLeft"
+                                className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                checked={postData.includeCta !== false}
+                                onChange={e => {
+                                    const newData = { ...postData, includeCta: e.target.checked };
+                                    if (!e.target.checked && currentSlide === postData.slides.length) {
+                                        setCurrentSlide(0);
+                                    }
+                                    setPostData(newData);
+                                    saveProjectData(newData, true);
+                                }}
+                            />
+                            <label htmlFor="includeCtaLeft" className="text-sm font-bold text-neutral-700 cursor-pointer">
+                                加入結尾行動呼籲頁面 (Include CTA Page)
+                            </label>
+                        </div></div>
                 </section>
             </div>
 
@@ -1410,6 +1674,15 @@ export default function App() {
                               {images[s.id] && <Check className="w-4 h-4 ml-1.5 inline text-white" />}
                            </button>
                         ))}
+                        {postData.includeCta !== false && (
+                            <div 
+                               className="px-4 py-2 border rounded-xl text-sm transition-all whitespace-nowrap font-black bg-purple-50 border-purple-200 text-purple-600 cursor-default select-none shadow-sm flex items-center gap-1.5"
+                               title="結尾行動呼籲頁面已啟用（請在左側選擇結尾圖）"
+                            >
+                               <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                               結尾 CTA 頁
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
                         <button 
@@ -1423,7 +1696,7 @@ export default function App() {
                     </div>
                 </div>
 
-                {postData.slides[currentSlide] && (
+                {(postData.slides[currentSlide] || currentSlide === postData.slides.length) && (
                     <div className="flex flex-col lg:flex-row gap-6">
                         
                         {/* Live Mockup Preview */}
@@ -1439,7 +1712,9 @@ export default function App() {
                                         <div 
                                             className="bg-white overflow-hidden relative w-full h-full"
                                         >
-                                            {images[postData.slides[currentSlide].id] ? (
+                                            {currentSlide === postData.slides.length ? (
+                                                <CtaSlideContent selectedCtaUrl={selectedCtaUrl} />
+                                            ) : images[postData.slides[currentSlide].id] ? (
                                             <img 
                                                 src={images[postData.slides[currentSlide].id]} 
                                                 className="absolute inset-0 w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500" 
@@ -1452,7 +1727,7 @@ export default function App() {
                                                 </div>
                                             )}
 
-                                            {images[postData.slides[currentSlide].id] && (
+                                            {currentSlide !== postData.slides.length && images[postData.slides[currentSlide].id] && (
                                                 <div className="absolute top-4 right-4 z-[60]">
                                                     <button
                                                         onClick={async (e) => {
@@ -1470,7 +1745,7 @@ export default function App() {
                                                                     titleTextEffect: suggestion.titleTextEffect || currentDs.titleTextEffect || currentDs.textEffect || 'shadow',
                                                                     titleSize: suggestion.titleSize || currentDs.titleSize,
                                                                     titleColor: suggestion.titleColor || currentDs.titleColor,
-                                                                    bodyFontFamily: suggestion.bodyFontFamily || currentDs.bodyFontFamily || currentDs.fontFamily,
+                                    bodyFontFamily: suggestion.bodyFontFamily || currentDs.bodyFontFamily || currentDs.fontFamily,
                                                                     bodyTextEffect: suggestion.bodyTextEffect || currentDs.bodyTextEffect || currentDs.textEffect || 'shadow',
                                                                     bodySize: suggestion.bodySize || currentDs.bodySize,
                                                                     bodyColor: suggestion.bodyColor || currentDs.bodyColor,
@@ -1493,40 +1768,42 @@ export default function App() {
                                                 </div>
                                             )}
 
-                                            <div 
-                                                className={cn("absolute left-0 right-0 pointer-events-none", getOuterLayoutBgClass(postData.slides[currentSlide].textPosition as any, currentSlide))}
-                                                style={getLayoutPaddingStyle(postData.slides[currentSlide].textPosition as any, false, currentSlide)}
-                                            >
-                                                <div className={cn("flex flex-col gap-2 relative z-50 pointer-events-auto", getInnerLayoutBgClass(currentSlide))}>
-                                                    <TextareaAutosize 
-                                                        value={postData.slides[currentSlide].imageText || ''}
-                                                        onChange={(e) => {
-                                                            const ns = [...postData.slides];
-                                                            ns[currentSlide].imageText = e.target.value;
-                                                            setPostData({...postData, slides: ns});
-                                                        }}
-                                                        onBlur={() => saveProjectData({...postData}, true)}
-                                                        placeholder="標題..."
-                                                        className="w-full font-black leading-tight drop-shadow-md outline-none bg-transparent resize-none overflow-hidden border border-transparent hover:border-white/20 focus:border-white/50 focus:bg-black/20 rounded px-1 -mx-1 cursor-text transition-colors placeholder:text-white/50"
-                                                        style={getTextStyle(true, false, currentSlide)}
-                                                    />
-                                                    <TextareaAutosize 
-                                                        value={postData.slides[currentSlide].imageBody || ''}
-                                                        onChange={(e) => {
-                                                            const ns = [...postData.slides];
-                                                            ns[currentSlide].imageBody = e.target.value;
-                                                            setPostData({...postData, slides: ns});
-                                                        }}
-                                                        onBlur={() => saveProjectData({...postData}, true)}
-                                                        placeholder="內容..."
-                                                        className="w-full font-semibold leading-relaxed drop-shadow-sm outline-none bg-transparent resize-none overflow-hidden border border-transparent hover:border-white/20 focus:border-white/50 focus:bg-black/20 rounded px-1 -mx-1 cursor-text transition-colors placeholder:text-white/50"
-                                                        style={getTextStyle(false, false, currentSlide)}
-                                                    />
+                                            {currentSlide !== postData.slides.length && (
+                                                <div 
+                                                    className={cn("absolute left-0 right-0 pointer-events-none", getOuterLayoutBgClass(postData.slides[currentSlide].textPosition as any, currentSlide))}
+                                                    style={getLayoutPaddingStyle(postData.slides[currentSlide].textPosition as any, currentSlide)}
+                                                >
+                                                    <div className={cn("flex flex-col relative z-50 pointer-events-auto", getInnerLayoutBgClass(currentSlide))} style={{ gap: '2.22cqw' }}>
+                                                        <TextareaAutosize 
+                                                            value={postData.slides[currentSlide].imageText || ''}
+                                                            onChange={(e) => {
+                                                                const ns = [...postData.slides];
+                                                                ns[currentSlide].imageText = e.target.value;
+                                                                setPostData({...postData, slides: ns});
+                                                            }}
+                                                            onBlur={() => saveProjectData({...postData}, true)}
+                                                            placeholder="標題..."
+                                                            className="w-full font-black leading-tight drop-shadow-md outline-none bg-transparent resize-none overflow-hidden border-0 p-0 m-0 cursor-text focus:ring-0 focus:outline-none whitespace-pre-wrap"
+                                                            style={getTextStyle(true, currentSlide)}
+                                                        />
+                                                        <TextareaAutosize 
+                                                            value={postData.slides[currentSlide].imageBody || ''}
+                                                            onChange={(e) => {
+                                                                const ns = [...postData.slides];
+                                                                ns[currentSlide].imageBody = e.target.value;
+                                                                setPostData({...postData, slides: ns});
+                                                            }}
+                                                            onBlur={() => saveProjectData({...postData}, true)}
+                                                            placeholder="內容..."
+                                                            className="w-full font-semibold leading-relaxed drop-shadow-sm outline-none bg-transparent resize-none overflow-hidden border-0 p-0 m-0 cursor-text focus:ring-0 focus:outline-none placeholder:text-white/30"
+                                                            style={getTextStyle(false, currentSlide)}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
 
-                                        {loadingSlide[postData.slides[currentSlide].id] && (
+                                        {currentSlide !== postData.slides.length && loadingSlide[postData.slides[currentSlide].id] && (
                                             <div className="absolute inset-0 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center z-10">
                                                 <Loader2 className="animate-spin text-[#f26522] w-10 h-10 mb-3" />
                                                 <span className="text-[#2D3142] font-black text-xs uppercase tracking-widest">Generating...</span>
@@ -1537,45 +1814,177 @@ export default function App() {
                             </div>
 
                             {/* Download Single Image Button */}
-                        <button 
-                            onClick={async () => {
-                                if (images[postData.slides[currentSlide].id]) {
-                                    showCopyStatus('📸 準備圖片中...');
-                                    try {
-                                        const el = document.getElementById(`export-slide-${currentSlide}`);
-                                        if (!el) return;
-                                        // Pass 1: Warm up Safari's image decoder cache (fixes first-time blank images)
-                                        await htmlToImage.toJpeg(el, { quality: 0.1, canvasWidth: 1080, canvasHeight: 1350, skipFonts: true });
-                                        // Pass 2: The actual high-quality capture
-                                        const dataUrl = await htmlToImage.toJpeg(el, { 
-                                            quality: 0.95, 
-                                            canvasWidth: 1080, 
-                                            canvasHeight: 1350,
-                                            pixelRatio: 1,
-                                            skipFonts: true,
-                                            cacheBust: true
-                                        });
-                                        const a = document.createElement('a');
-                                        a.href = dataUrl;
-                                        a.download = `traveltopia_ig_slide_${currentSlide + 1}.jpg`;
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        showCopyStatus(`✅ 第 ${currentSlide + 1} 頁已下載！`);
-                                    } catch (e) {
-                                        showCopyStatus('⚠️ 下載失敗');
-                                    }
-                                } else {
-                                    showCopyStatus(`⚠️ 請先生成圖片`);
-                                }
-                            }}
-                            className="w-full py-3 bg-[#F7F6F3] text-[#2D3142] hover:bg-white hover:text-[#f26522] border border-[#E5E7EB] rounded-2xl text-sm font-black transition-colors flex justify-center items-center gap-2 shadow-sm"
-                        >
-                            ⬇️ 下載含文字版面圖片
-                        </button>
+                            {currentSlide !== postData.slides.length ? (
+                                <button 
+                                    onClick={async () => {
+                                        if (images[postData.slides[currentSlide].id]) {
+                                            showCopyStatus('📸 準備圖片中...');
+                                            try {
+                                                const el = document.getElementById(`export-slide-${currentSlide}`);
+                                                if (!el) return;
+                                                // Pass 1: Warm up Safari's image decoder cache (fixes first-time blank images)
+                                                await htmlToImage.toJpeg(el, { quality: 0.1, canvasWidth: 1080, canvasHeight: 1350, skipFonts: true });
+                                                // Pass 2: The actual high-quality capture
+                                                const dataUrl = await htmlToImage.toJpeg(el, { 
+                                                    quality: 0.95, 
+                                                    canvasWidth: 1080, 
+                                                    canvasHeight: 1350,
+                                                    pixelRatio: 1,
+                                                    skipFonts: false,
+                                                    cacheBust: true
+                                                });
+                                                const a = document.createElement('a');
+                                                a.href = dataUrl;
+                                                a.download = `traveltopia_ig_slide_${currentSlide + 1}.jpg`;
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                document.body.removeChild(a);
+                                                showCopyStatus(`✅ 第 ${currentSlide + 1} 頁已下載！`);
+                                            } catch (e) {
+                                                showCopyStatus('⚠️ 下載失敗');
+                                            }
+                                        } else {
+                                            showCopyStatus(`⚠️ 請先生成圖片`);
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-[#F7F6F3] text-[#2D3142] hover:bg-white hover:text-[#f26522] border border-[#E5E7EB] rounded-2xl text-sm font-black transition-colors flex justify-center items-center gap-2 shadow-sm"
+                                >
+                                    ⬇️ 下載含文字版面圖片
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={async () => {
+                                        showCopyStatus('📸 準備圖片中...');
+                                        try {
+                                            const el = document.getElementById(`export-slide-cta`);
+                                            if (!el) return;
+                                            // Pass 1: Warm up Safari's image decoder cache (fixes first-time blank images)
+                                            await htmlToImage.toJpeg(el, { quality: 0.1, canvasWidth: 1080, canvasHeight: 1350, skipFonts: true });
+                                            // Pass 2: The actual high-quality capture
+                                            const dataUrl = await htmlToImage.toJpeg(el, { 
+                                                quality: 0.95, 
+                                                canvasWidth: 1080, 
+                                                canvasHeight: 1350,
+                                                pixelRatio: 1,
+                                                skipFonts: false,
+                                                cacheBust: true
+                                            });
+                                            const a = document.createElement('a');
+                                            a.href = dataUrl;
+                                            a.download = `traveltopia_ig_slide_cta.jpg`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            showCopyStatus(`✅ 結尾行動呼籲頁已下載！`);
+                                        } catch (e) {
+                                            showCopyStatus('⚠️ 下載失敗');
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-[#F7F6F3] text-[#2D3142] hover:bg-white hover:text-[#f26522] border border-[#E5E7EB] rounded-2xl text-sm font-black transition-colors flex justify-center items-center gap-2 shadow-sm"
+                                >
+                                    ⬇️ 下載結尾行動呼籲頁圖片
+                                </button>
+                            )}
                         </div>
 
                         {/* Slide Content Editor */}
+                        {currentSlide === postData.slides.length ? (
+                            <div className="flex-1 bg-[#F7F6F3] border border-dashed border-[#E5E7EB] rounded-3xl p-6 flex flex-col gap-6">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-6 bg-[#f26522] rounded-full"></div>
+                                    <h3 className="text-lg font-black text-[#2D3142]">結尾行動呼籲頁面 (CTA Page)</h3>
+                                </div>
+
+                                <div className="flex flex-col gap-4 text-left">
+                                    <div>
+                                        <label className="text-xs text-neutral-500 uppercase font-black tracking-wider block mb-2">
+                                            版面類型
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button 
+                                                onClick={() => {
+                                                    const newData = { ...postData, selectedCtaId: undefined };
+                                                    setPostData(newData);
+                                                    saveProjectData(newData, true);
+                                                }}
+                                                className={cn("px-4 py-3 rounded-xl border text-sm font-bold transition flex flex-col items-center gap-1", 
+                                                    !(postData as any).selectedCtaId ? "bg-white border-[#f26522] text-[#f26522] shadow-sm" : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                                                )}
+                                            >
+                                                <span>旅遊邦預設設計</span>
+                                                <span className="text-[10px] opacity-70 font-normal">Follow Us 固定排版</span>
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    const firstCta = brandLibrary.find(item => item.category === 'CTA');
+                                                    const newData = { ...postData, selectedCtaId: firstCta?.id || 'upload_prompt' };
+                                                    setPostData(newData);
+                                                    saveProjectData(newData, true);
+                                                }}
+                                                className={cn("px-4 py-3 rounded-xl border text-sm font-bold transition flex flex-col items-center gap-1", 
+                                                    (postData as any).selectedCtaId ? "bg-white border-[#f26522] text-[#f26522] shadow-sm" : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                                                )}
+                                            >
+                                                <span>自訂上傳圖片</span>
+                                                <span className="text-[10px] opacity-70 font-normal">使用自訂的 IG 結尾圖</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {(postData as any).selectedCtaId && (
+                                        <div className="border-t border-[#E5E7EB] pt-4 mt-2 flex flex-col gap-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-black text-neutral-500 uppercase tracking-wider">選擇自訂結尾圖</span>
+                                                <label className="text-xs font-black text-white bg-[#2EB1AD] px-3 py-1.5 rounded-lg hover:bg-[#259b97] cursor-pointer transition flex items-center gap-1">
+                                                    <Upload className="w-3.5 h-3.5" /> 上傳圖片
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadToLibrary(e, 'CTA')} />
+                                                </label>
+                                            </div>
+
+                                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+                                                {brandLibrary.filter(item => item.category === 'CTA').map(item => {
+                                                    const isSelected = (postData as any).selectedCtaId === item.id;
+                                                    return (
+                                                        <div key={item.id} className="relative group shrink-0">
+                                                            <img 
+                                                                src={item.dataUrl} 
+                                                                className={cn("w-16 h-16 rounded-xl object-cover cursor-pointer border-[3px] transition", 
+                                                                    isSelected ? "border-[#f26522]" : "border-transparent opacity-60 hover:opacity-100"
+                                                                )} 
+                                                                onClick={() => {
+                                                                    const newData = { ...postData, selectedCtaId: item.id };
+                                                                    setPostData(newData);
+                                                                    saveProjectData(newData, true);
+                                                                }}
+                                                            />
+                                                            <button 
+                                                                 onClick={(e) => handleDeleteLibrary(item.id, e)}
+                                                                 className="absolute top-0.5 right-0.5 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <TrashIcon className="w-2.5 h-2.5" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {brandLibrary.filter(item => item.category === 'CTA').length === 0 && (
+                                                    <div className="text-xs text-neutral-400 italic py-4 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl w-full bg-white gap-2">
+                                                        <span>尚未上傳任何自訂結尾圖...</span>
+                                                        <label className="text-[10px] font-black text-[#2EB1AD] bg-[#E0F2F1] px-2 py-1 rounded hover:bg-[#B2DFDB] cursor-pointer transition">
+                                                            立即上傳
+                                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadToLibrary(e, 'CTA')} />
+                                                        </label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="text-xs text-neutral-400 bg-neutral-100 rounded-xl p-3 border border-neutral-200 leading-relaxed mt-2">
+                                        💡 提示：您上傳的圖片會自動儲存到您的雲端品牌圖庫中，所有專案都可以隨時取用。建議上傳 1080x1350 比例 of JPG 圖片以達最佳滿版效果。
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
                         <div className="flex-1 bg-[#F7F6F3] border border-dashed border-[#E5E7EB] rounded-3xl p-6 flex flex-col gap-5">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-6 bg-[#f26522] rounded-full"></div>
@@ -2044,6 +2453,7 @@ export default function App() {
                                 </div>
                             </div>
                         </div>
+                        )}
                     </div>
                 )}
             </section>
@@ -2162,9 +2572,9 @@ export default function App() {
                             <div className="absolute inset-0 pointer-events-none">
                                 <div 
                                     className={cn("absolute left-0 right-0 pointer-events-none", getOuterLayoutBgClass(postData.slides[enlargedImage.slideIdx].textPosition as any, enlargedImage.slideIdx))}
-                                    style={getLayoutPaddingStyle(postData.slides[enlargedImage.slideIdx].textPosition as any, false, enlargedImage.slideIdx)}
+                                    style={getLayoutPaddingStyle(postData.slides[enlargedImage.slideIdx].textPosition as any, enlargedImage.slideIdx)}
                                 >
-                                    <div className={cn("flex flex-col gap-2 relative z-50 pointer-events-auto", getInnerLayoutBgClass(enlargedImage.slideIdx))}>
+                                    <div className={cn("flex flex-col relative z-50 pointer-events-auto", getInnerLayoutBgClass(enlargedImage.slideIdx))} style={{ gap: '2.22cqw' }}>
                                         <TextareaAutosize 
                                             value={postData.slides[enlargedImage.slideIdx].imageText || ''}
                                             onChange={(e) => {
@@ -2175,8 +2585,8 @@ export default function App() {
                                             }}
                                             onBlur={() => saveProjectData({...postData}, true)}
                                             placeholder="標題..."
-                                            className="w-full font-black leading-tight drop-shadow-md outline-none bg-transparent resize-none overflow-hidden border border-transparent hover:border-white/20 focus:border-white/50 focus:bg-black/20 rounded px-1 -mx-1 cursor-text transition-colors placeholder:text-white/50"
-                                            style={getTextStyle(true, false, enlargedImage.slideIdx)}
+                                            className="w-full font-black leading-tight drop-shadow-md outline-none bg-transparent resize-none overflow-hidden border-0 p-0 m-0 cursor-text focus:ring-0 focus:outline-none whitespace-pre-wrap"
+                                            style={getTextStyle(true, enlargedImage.slideIdx)}
                                         />
                                         <TextareaAutosize 
                                             value={postData.slides[enlargedImage.slideIdx].imageBody || ''}
@@ -2188,8 +2598,8 @@ export default function App() {
                                             }}
                                             onBlur={() => saveProjectData({...postData}, true)}
                                             placeholder="內容..."
-                                            className="w-full font-semibold leading-relaxed drop-shadow-sm outline-none bg-transparent resize-none overflow-hidden border border-transparent hover:border-white/20 focus:border-white/50 focus:bg-black/20 rounded px-1 -mx-1 cursor-text transition-colors placeholder:text-white/50"
-                                            style={getTextStyle(false, false, enlargedImage.slideIdx)}
+                                            className="w-full font-semibold leading-relaxed drop-shadow-sm outline-none bg-transparent resize-none overflow-hidden border-0 p-0 m-0 cursor-text focus:ring-0 focus:outline-none placeholder:text-white/30"
+                                            style={getTextStyle(false, enlargedImage.slideIdx)}
                                         />
                                     </div>
                                 </div>
@@ -2366,7 +2776,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col xl:flex-row gap-6">
                 <div className="xl:w-2/3 flex flex-col gap-4">
                     <h3 className="font-bold text-zinc-800 px-2 flex items-center justify-between">
-                       <span>🖼️ 圖片預覽 ({postData.slides.length} 張)</span>
+                       <span>🖼️ 圖片預覽 ({postData.slides.length + (postData.includeCta !== false ? 1 : 0)} 張)</span>
                        <span className="text-xs text-zinc-500 font-normal xl:hidden">左右滑動查看</span>
                     </h3>
                     <div className="flex xl:grid xl:grid-cols-2 2xl:grid-cols-3 gap-4 overflow-x-auto xl:overflow-x-visible pb-4 snap-x xl:snap-none px-2">
@@ -2377,11 +2787,11 @@ export default function App() {
                                         <img src={images[slide.id]} className="absolute inset-0 w-full h-full object-cover" />
                                         <div 
                                             className={cn("absolute left-0 right-0 pointer-events-none", getOuterLayoutBgClass(slide.textPosition as any, idx))}
-                                            style={getLayoutPaddingStyle(slide.textPosition as any, false, idx)}
+                                            style={getLayoutPaddingStyle(slide.textPosition as any, idx)}
                                         >
-                                            <div className={cn("flex flex-col gap-2 cursor-pointer pointer-events-auto", getInnerLayoutBgClass(idx))}>
-                                                {slide.imageText && <h4 className="font-black leading-tight drop-shadow-md text-xl" style={getTextStyle(true, false, idx)}>{slide.imageText}</h4>}
-                                                {slide.imageBody && <p className="font-semibold leading-relaxed whitespace-pre-wrap drop-shadow-sm text-sm" style={getTextStyle(false, false, idx)}>{slide.imageBody}</p>}
+                                            <div className={cn("flex flex-col cursor-pointer pointer-events-auto", getInnerLayoutBgClass(idx))} style={{ gap: '2.22cqw' }}>
+                                                {slide.imageText && <h4 className="font-black leading-tight drop-shadow-md whitespace-pre-wrap" style={getTextStyle(true, idx)}>{slide.imageText}</h4>}
+                                                {slide.imageBody && <p className="font-semibold leading-relaxed whitespace-pre-wrap drop-shadow-sm" style={getTextStyle(false, idx)}>{slide.imageBody}</p>}
                                             </div>
                                         </div>
                                     </>
@@ -2415,6 +2825,33 @@ export default function App() {
                                 )}
                             </div>
                         ))}
+                        {postData.includeCta !== false && (
+                            <div className="min-w-[320px] sm:min-w-[400px] xl:min-w-0 xl:w-full aspect-[4/5] bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden relative snap-center xl:snap-align-none shrink-0 group" style={{ containerType: 'inline-size' }}>
+                                <CtaSlideContent selectedCtaUrl={selectedCtaUrl} />
+                                <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-sm z-30">
+                                    {postData.slides.length + 1} (CTA)
+                                </div>
+                                {exportFiles[postData.slides.length] && (
+                                    <button
+                                        onClick={() => {
+                                            const a = document.createElement('a');
+                                            const url = URL.createObjectURL(exportFiles[postData.slides.length]);
+                                            a.href = url;
+                                            a.download = exportFiles[postData.slides.length].name;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                            showCopyStatus(`✅ 結尾行動呼籲頁面已下載！`);
+                                        }}
+                                        className="absolute top-3 right-3 bg-black/60 hover:bg-black text-white p-2 rounded backdrop-blur-sm transition-colors pointer-events-auto z-30"
+                                        title="下載此相片 (JPG)"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="xl:w-1/3 flex flex-col gap-4">
@@ -2438,6 +2875,19 @@ export default function App() {
       </Dialog>
 
       <div style={{ position: 'fixed', top: 0, left: 0, zIndex: -9999, pointerEvents: 'none', visibility: 'visible' }}>
+        {postData.includeCta !== false && (
+            <div 
+                id="export-slide-cta"
+                className="bg-white overflow-hidden relative"
+                style={{ 
+                    width: 1080, 
+                    height: 1350,
+                    containerType: 'inline-size'
+                }}
+            >
+                <CtaSlideContent selectedCtaUrl={selectedCtaUrl} />
+            </div>
+        )}
         {postData.slides.map((slide, idx) => (
             <div 
                 key={`export-${slide.id}`}
@@ -2445,7 +2895,8 @@ export default function App() {
                 className="bg-white overflow-hidden relative"
                 style={{ 
                     width: 1080, 
-                    height: 1350
+                    height: 1350,
+                    containerType: 'inline-size'
                 }}
             >
                 {images[slide.id] ? (
@@ -2456,11 +2907,11 @@ export default function App() {
 
                 <div 
                     className={cn("absolute left-0 right-0", getOuterLayoutBgClass(slide.textPosition as any, idx))}
-                    style={getLayoutPaddingStyle(slide.textPosition as any, true, idx)}
+                    style={getLayoutPaddingStyle(slide.textPosition as any, idx)}
                 >
-                    <div className={cn("flex flex-col gap-6", getInnerLayoutBgClass(idx))}>
-                        {slide.imageText && <h4 className="font-black leading-tight drop-shadow-md" style={getTextStyle(true, true, idx)}>{slide.imageText}</h4>}
-                        {slide.imageBody && <p className="font-semibold leading-relaxed whitespace-pre-wrap drop-shadow-sm" style={getTextStyle(false, true, idx)}>{slide.imageBody}</p>}
+                    <div className={cn("flex flex-col", getInnerLayoutBgClass(idx))} style={{ gap: '2.22cqw' }}>
+                        {slide.imageText && <h4 className="font-black leading-tight drop-shadow-md whitespace-pre-wrap" style={getTextStyle(true, idx)}>{slide.imageText}</h4>}
+                        {slide.imageBody && <p className="font-semibold leading-relaxed whitespace-pre-wrap drop-shadow-sm" style={getTextStyle(false, idx)}>{slide.imageBody}</p>}
                     </div>
                 </div>
             </div>

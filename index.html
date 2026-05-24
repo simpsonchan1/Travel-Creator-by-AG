@@ -4,6 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.width = '100vw';
+        div.style.height = '100vh';
+        div.style.background = '#7f1d1d';
+        div.style.color = '#fecaca';
+        div.style.padding = '30px';
+        div.style.zIndex = '999999';
+        div.style.fontFamily = 'monospace';
+        div.style.fontSize = '14px';
+        div.style.overflow = 'auto';
+        div.innerHTML = '<h1 style="color:#fca5a5;font-size:24px;margin-bottom:15px;">🚨 Frontend Runtime Crash Detected</h1>' +
+          '<p><strong>Error:</strong> ' + message + '</p>' +
+          '<p><strong>File:</strong> ' + source + ':' + lineno + ':' + colno + '</p>' +
+          '<pre style="background:#450a0a;padding:15px;border-radius:8px;margin-top:15px;white-space:pre-wrap;word-break:break-all;">' + (error && error.stack || 'No stack trace available') + '</pre>';
+        document.body.appendChild(div);
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        var message = event.reason && event.reason.message || String(event.reason);
+        var stack = event.reason && event.reason.stack || '';
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.width = '100vw';
+        div.style.height = '100vh';
+        div.style.background = '#7f1d1d';
+        div.style.color = '#fecaca';
+        div.style.padding = '30px';
+        div.style.zIndex = '999999';
+        div.style.fontFamily = 'monospace';
+        div.style.fontSize = '14px';
+        div.style.overflow = 'auto';
+        div.innerHTML = '<h1 style="color:#fca5a5;font-size:24px;margin-bottom:15px;">🚨 Unhandled Promise Rejection</h1>' +
+          '<p><strong>Reason:</strong> ' + message + '</p>' +
+          '<pre style="background:#450a0a;padding:15px;border-radius:8px;margin-top:15px;white-space:pre-wrap;word-break:break-all;">' + stack + '</pre>';
+        document.body.appendChild(div);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

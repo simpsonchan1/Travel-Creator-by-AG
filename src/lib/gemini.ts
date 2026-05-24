@@ -60,6 +60,58 @@ export async function generateCarouselStory(keyword: string, slideCount: number,
     return JSON.parse(response.text!);
 }
 
+export async function parseImportedScript(rawText: string, language: "zh" | "en" = "zh"): Promise<any> {
+    const ai = getAiInstance();
+    const langInstruction = language === "en" 
+        ? "Written in professional travel news style in UK English. Use rich and formal UK English."
+        : "Written in professional travel news style, Traditional Chinese, Hong Kong (香港MM/Mill MILK專業深入旅遊專題風格).";
+
+    const systemPrompt = `You are an expert travel journalist, professional content editor, and AI prompt engineer for 'Traveltopia'.
+    Your task is to parse a raw text draft, script, or storyboard outline provided by the user, and intelligently extract and structure it into a cohesive Instagram carousel.
+    
+    Rules:
+    1. Read the raw text carefully and automatically determine the optimal number of slides needed to convey the content logically (typically 3 to 10 slides). Do not feel constrained by a fixed count; optimize for clarity and engagement.
+    2. mainCaption: Formulate a cohesive, engaging caption summarizing the story. ${langInstruction} The tone should be engaging, trendy, and spark discussion. Include a hook, detailed summary context from the raw text, and exactly 5 highly relevant hashtags. NEVER use the em dash character.
+    3. slides: For each slide:
+       a. id: Integer starting from 1.
+       b. imageText: A compelling, editorial title (max 20 chars). ${language === "en" ? "Must be in UK English." : "Must be in formal Traditional Chinese."}
+       c. imageBody: A highly detailed, informative description to be overlaid on the image (2-4 rich and descriptive sentences). ${language === "en" ? "Must be in UK English." : "Must be in 繁體中文書面語."} Synthesize and refine context from the raw text draft.
+       d. imagePrompt MUST BE IN ENGLISH: Analyze the layout or visual context described in the user's text for this slide. If none is explicitly described, deduce a highly detailed, professional, and contextually matching visual concept. Write a highly detailed English image prompt describing the scene, lighting, composition, style, and mood for an AI image generator to create a high-quality visualization.
+       e. imagePromptZh MUST BE IN CHINESE: Professional Traditional Chinese (Hong Kong style) translation of the imagePrompt.`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: `Intelligently parse the following raw text draft, script, or storyboard and extract/structure it into the required carousel layout (mainCaption and slides):\n\n${rawText}`,
+        config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    mainCaption: { type: Type.STRING },
+                    slides: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                id: { type: Type.INTEGER },
+                                imageText: { type: Type.STRING },
+                                imageBody: { type: Type.STRING },
+                                imagePrompt: { type: Type.STRING },
+                                imagePromptZh: { type: Type.STRING }
+                            },
+                            required: ["id", "imageText", "imageBody", "imagePrompt", "imagePromptZh"]
+                        }
+                    }
+                },
+                required: ["mainCaption", "slides"]
+            }
+        }
+    });
+
+    return JSON.parse(response.text!);
+}
+
 export async function regenerateSlidesFromCaption(caption: string, slideCount: number, language: "zh" | "en"): Promise<any> {
     const ai = getAiInstance();
     const langInstruction = language === 'en' 
