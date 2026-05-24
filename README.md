@@ -2,13 +2,12 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# App developed with Google AntiGravity
 
-This contains everything you need to run your app locally.
+A web tools that help me to generate social media contact including text, pictures. And able to publish to social media in one click.
+"Put your our key" - API key will only store on your device.
 
-View your app in AI Studio: https://ai.studio/apps/3c9a47c5-4af7-465c-9cbe-3977cb5a73b4
-
-## Run Locally
+## Run Locally and over the internet.
 
 **Prerequisites:**  Node.js
 
